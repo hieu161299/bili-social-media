@@ -1,5 +1,6 @@
 package com.bilibili.serviceImplement;
 
+import com.bilibili.config.JwtProvider;
 import com.bilibili.models.User;
 import com.bilibili.repository.UserRepository;
 import com.bilibili.service.UserService;
@@ -13,6 +14,7 @@ import java.util.Optional;
 public class UserServiceImplement implements UserService {
     @Autowired
     UserRepository userRepository;
+
     @Override
     public User registerUser(User user) {
         User newUser = new User();
@@ -26,7 +28,7 @@ public class UserServiceImplement implements UserService {
     }
 
     @Override
-    public User findUserById(Integer userId)throws Exception {
+    public User findUserById(Integer userId) throws Exception {
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             return user.get();
@@ -39,20 +41,21 @@ public class UserServiceImplement implements UserService {
         User user = userRepository.findByEmail(email);
         return user;
     }
+
     // 1 follow 2 => add id cua user1 vào list follower của 2, đồng thời thêm id của user2 vào list following của user1
     @Override
-    public User followUser(Integer userId1, Integer userId2) throws Exception {
-        User user1 = findUserById(userId1);
+    public User followUser(Integer reqUserId, Integer userId2) throws Exception {
+        User reqUser = findUserById(reqUserId);
         User user2 = findUserById(userId2);
-        user2.getFollowers().add(user1.getId());
-        user1.getFollowings().add(user2.getId());
-        userRepository.save(user1);
+        user2.getFollowers().add(reqUser.getId());
+        reqUser.getFollowings().add(user2.getId());
+        userRepository.save(reqUser);
         userRepository.save(user2);
-        return user1;
+        return reqUser;
     }
 
     @Override
-    public User updateUser(User user , Integer userId) throws Exception {
+    public User updateUser(User user, Integer userId) throws Exception {
         Optional<User> user1 = userRepository.findById(userId);
         if (user1.isEmpty()) {
             throw new Exception("user not exist with userId " + userId);
@@ -67,6 +70,9 @@ public class UserServiceImplement implements UserService {
         if (user.getEmail() != null) {
             oldUser.setEmail(user.getEmail());
         }
+        if (user.getGender() != null) {
+            oldUser.setGender(user.getGender());
+        }
         User updateuser = userRepository.save(oldUser);
         return updateuser;
     }
@@ -74,5 +80,12 @@ public class UserServiceImplement implements UserService {
     @Override
     public List<User> searchUser(String query) {
         return userRepository.searchUser(query);
+    }
+
+    @Override
+    public User findUserByJwt(String jwt) {
+        String email = JwtProvider.getEmailFromJwtToken(jwt);
+        User user = userRepository.findByEmail(email);
+        return user;
     }
 }
